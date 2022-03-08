@@ -1,1 +1,1 @@
-Terraform Playground (AWS)
+Terraform Playground

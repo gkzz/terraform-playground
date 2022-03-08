@@ -1,11 +1,11 @@
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm
-resource "aws_cloudwatch_metric_alarm" "aws_lambda_alarm" {
+resource "aws_cloudwatch_metric_alarm" "aws_lambda_monitoring_alarm" {
   # "dimensions" で指定した AWS Lambda が以下の条件に合致した場合、CloudWatch Alarmを飛ばす
   # 60秒に1回以上、"ERROR"判定となる
-  alarm_name                = "${var.prefix}_alarm"
+  alarm_name                = "${var.base}_alarm"
   actions_enabled           = true
   alarm_actions             = [
-    aws_sns_topic.aws_lambda_alarm_topic.arn
+    aws_sns_topic.aws_lambda_monitoring_topic.arn
   ]
   dimensions                = var.alarms_associated_metric
   metric_name               = "Errors"
@@ -27,20 +27,20 @@ resource "aws_cloudwatch_metric_alarm" "aws_lambda_alarm" {
 
 
   depends_on = [
-    aws_sns_topic.aws_lambda_alarm_topic
+    aws_sns_topic.aws_lambda_monitoring_topic
   ]
 }
 
 
-resource "aws_sns_topic" "aws_lambda_alarm_topic" {
+resource "aws_sns_topic" "aws_lambda_monitoring_topic" {
   application_success_feedback_sample_rate = 0
   content_based_deduplication              = false
-  display_name                             = "${aws_cloudwatch_metric_alarm.aws_lambda_alarm.alarm_name}_topic"
+  display_name                             = "${var.base}_topic"
   fifo_topic                               = false
   firehose_success_feedback_sample_rate    = 0
   http_success_feedback_sample_rate        = 0
   lambda_success_feedback_sample_rate      = 0
-  name                                     = "${aws_cloudwatch_metric_alarm.aws_lambda_alarm.alarm_name}_topic"
+  name                                     = "${var.base}_topic"
   /*
   policy                                   = jsonencode(
   {
@@ -69,7 +69,7 @@ resource "aws_sns_topic" "aws_lambda_alarm_topic" {
         Principal = {
           AWS = "*"
         }
-        Resource  = "arn:aws:sns:${var.region}:${var.aws_account_id}:${aws_cloudwatch_metric_alarm.aws_lambda_alarm.alarm_name}_topic"
+        Resource  = "arn:aws:sns:${var.region}:${var.aws_account_id}:${var.prefix}_topic"
         Sid       = "__default_statement_ID"
       },
     ]
@@ -82,11 +82,11 @@ resource "aws_sns_topic" "aws_lambda_alarm_topic" {
   tags_all                                 = {}
 }
 
-resource "aws_sns_topic_policy" "aws_lambda_alarm_topic_policy" {
-  arn = aws_sns_topic.aws_lambda_alarm_topic.arn
-  policy = data.aws_iam_policy_document.aws_lambda_alarm_topic_policy_document.json
+resource "aws_sns_topic_policy" "aws_lambda_monitoring_topic_policy" {
+  arn = aws_sns_topic.aws_lambda_monitoring_topic.arn
+  policy = data.aws_iam_policy_document.aws_lambda_monitoring_topic_policy_document.json
 }
-data "aws_iam_policy_document" "aws_lambda_alarm_topic_policy_document" {
+data "aws_iam_policy_document" "aws_lambda_monitoring_topic_policy_document" {
   policy_id = "__default_policy_ID"
   statement {
         actions    = [
@@ -113,12 +113,18 @@ data "aws_iam_policy_document" "aws_lambda_alarm_topic_policy_document" {
           identifiers = ["*"]
         }
         resources  = [
-          aws_sns_topic.aws_lambda_alarm_topic
+          aws_sns_topic.aws_lambda_monitoring_topic.arn
         ]
         sid     = "__default_statement_ID"
       }
 }
 
-output "aws_lambda_alarm_topic_arn" {
-  value = aws_sns_topic.aws_lambda_alarm_topic
+resource "aws_sns_topic_subscription" "aws_lambda_monitoring_topic_subscription" {
+  topic_arn = aws_sns_topic.aws_lambda_monitoring_topic.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.aws_lambda_monitoring_function.arn
+}
+
+output "aws_lambda_monitoring_topic_arn" {
+  value = aws_sns_topic.aws_lambda_monitoring_topic.arn
 }
