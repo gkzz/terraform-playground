@@ -119,12 +119,6 @@ data "aws_iam_policy_document" "aws_lambda_monitoring_topic_policy_document" {
       }
 }
 
-resource "aws_sns_topic_subscription" "aws_lambda_monitoring_topic_subscription" {
-  topic_arn = aws_sns_topic.aws_lambda_monitoring_topic.arn
-  protocol  = "lambda"
-  endpoint  = aws_lambda_function.aws_lambda_monitoring_function.arn
-}
-
 output "aws_lambda_monitoring_topic_arn" {
   value = aws_sns_topic.aws_lambda_monitoring_topic.arn
 }
